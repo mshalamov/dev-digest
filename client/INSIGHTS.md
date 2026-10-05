@@ -8,11 +8,15 @@ Append-only. One line per finding, at the end of its section:
 ## What Doesn't Work
 
 ## Codebase Patterns
+- 2026-10-05 `RunSummary` (`cost_usd`) and `PrMeta` cost fields were edited in both vendored `shared` copies (client and server); keep them identical or wire parsing drifts. Applies to `src/vendor/shared/contracts/trace.ts:107`.
+- 2026-10-05 Supersedes the entry above: `RunStats.cost_usd`, `RunSummary.cost_usd` and `PrMeta.cost_usd` live in both vendored copies, but the `trace.ts` copies already differ in the `PromptAssembly` doc comments (lines 44-46), so edit each by hand and never copy one over the other. Applies to `src/vendor/shared/contracts/trace.ts:44`.
 
 ## Tool & Library Notes
 
 ## Recurring Errors & Fixes
 
 ## Session Notes
+- 2026-10-05 Added 1 entry to client/INSIGHTS.md (run-cost-badge).
+- 2026-10-05 Added 1 entry to client/INSIGHTS.md (vendored contract note).
 
 ## Open Questions
