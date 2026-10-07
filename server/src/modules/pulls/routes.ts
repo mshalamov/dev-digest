@@ -9,7 +9,8 @@ import { IdParams } from '../_shared/schemas.js';
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import { deriveReviewStatus } from './status.js';
 import { totalRunCostByPr } from './run-cost.js';
-import { latestFindingsByPr, listFindingsField } from './findings-preview.js';
+import { latestFindingsByPr, latestReviewIdsPerAgent, listFindingsField } from './findings-preview.js';
+import { lowestLatestScoreByPr } from './score.js';
 
 /**
  * F1 — pulls module. PR import via Octokit (list + per-PR detail).
@@ -113,26 +114,25 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       }
     }
 
-    // Latest review per PR → the list's SCORE ring and FINDINGS column. Computed
-    // on read from reviews (no FK denorm); the list is small, so IN-queries + JS
-    // grouping are cheap.
+    // Newest review per agent → the list's SCORE ring (lowest of them) and the
+    // FINDINGS column. Computed on read from reviews (no FK denorm); the list
+    // is small, so IN-queries + JS grouping are cheap.
     const prIds = rows.map((r) => r.id);
-    const latestReviewByPr = new Map<string, { id: string; score: number | null }>();
+    let scoreByPr = new Map<string, number | null>();
+    let reviewIdsByPr = new Map<string, string[]>();
     if (prIds.length > 0) {
       const reviewRows = await container.db
-        .select({ id: t.reviews.id, prId: t.reviews.prId, score: t.reviews.score })
+        .select({ id: t.reviews.id, prId: t.reviews.prId, agentId: t.reviews.agentId, score: t.reviews.score })
         .from(t.reviews)
         .where(and(inArray(t.reviews.prId, prIds), eq(t.reviews.kind, 'review')))
         .orderBy(desc(t.reviews.createdAt));
-      // Rows are newest-first → first seen per PR is the latest review.
-      for (const rv of reviewRows) {
-        if (!latestReviewByPr.has(rv.prId)) latestReviewByPr.set(rv.prId, { id: rv.id, score: rv.score });
-      }
+      // Rows are newest-first → first seen per (PR, agent) is that agent's latest review.
+      reviewIdsByPr = latestReviewIdsPerAgent(reviewRows);
+      scoreByPr = lowestLatestScoreByPr(reviewRows);
     }
 
-    // FINDINGS = that same latest review's findings (see findings-preview.ts).
-    const latestReviewIdByPr = new Map([...latestReviewByPr].map(([prId, v]) => [prId, v.id] as const));
-    const reviewIds = [...latestReviewIdByPr.values()];
+    // FINDINGS = the newest review of each agent (see findings-preview.ts).
+    const reviewIds = [...reviewIdsByPr.values()].flat();
     const findingRows =
       reviewIds.length > 0
         ? await container.db
@@ -151,7 +151,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
             .from(t.findings)
             .where(inArray(t.findings.reviewId, reviewIds))
         : [];
-    const findingsByPr = latestFindingsByPr(latestReviewIdByPr, findingRows);
+    const findingsByPr = latestFindingsByPr(reviewIdsByPr, findingRows);
 
     // COST = total of all the PR's completed runs (see run-cost.ts).
     const runRows =
@@ -165,7 +165,6 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
 
     const now = Date.now();
     return rows.map((r) => {
-      const review = latestReviewByPr.get(r.id);
       return {
         id: r.id,
         number: r.number,
@@ -186,7 +185,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         }),
         opened_at: r.openedAt?.toISOString() ?? null,
         updated_at: r.updatedAt?.toISOString() ?? null,
-        score: review ? review.score : null,
+        score: scoreByPr.get(r.id) ?? null,
         cost_usd: costByPr.get(r.id) ?? null,
         ...listFindingsField(findingsByPr.get(r.id)),
       };

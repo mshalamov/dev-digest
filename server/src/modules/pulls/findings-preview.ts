@@ -2,9 +2,11 @@ import { Severity, type PrFindingCounts, type PrFindingPreview } from '@devdiges
 
 /**
  * FINDINGS column on the PR list: a read-only preview of the findings of the
- * PR's latest review, the same review the score ring is taken from. Pure so it
- * is unit-testable without a DB. The client counts per severity from this, so
- * there is no extra fetch on hover and no LLM call.
+ * newest review of EACH agent on the PR. "Run all agents" writes one review per
+ * agent, so taking only the newest review overall would hide one agent's
+ * findings behind another's clean run. Pure so it is unit-testable without a
+ * DB. The client counts per severity from this, so there is no extra fetch on
+ * hover and no LLM call.
  */
 export interface FindingPreviewRow {
   id: string;
@@ -37,8 +39,26 @@ export function shortSummary(markdown: string): string {
   return plain.length > SUMMARY_MAX ? `${plain.slice(0, SUMMARY_MAX - 1).trimEnd()}…` : plain;
 }
 
+/** Newest review id per (PR, agent), from reviews ordered newest-first. A
+ *  review whose agent was deleted (null) counts once, as its own "agent". */
+export function latestReviewIdsPerAgent(
+  reviewsNewestFirst: { id: string; prId: string; agentId: string | null }[],
+): Map<string, string[]> {
+  const seen = new Set<string>();
+  const out = new Map<string, string[]>();
+  for (const rv of reviewsNewestFirst) {
+    const key = `${rv.prId}|${rv.agentId ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const ids = out.get(rv.prId);
+    if (ids) ids.push(rv.id);
+    else out.set(rv.prId, [rv.id]);
+  }
+  return out;
+}
+
 export function latestFindingsByPr(
-  latestReviewIdByPr: Map<string, string>,
+  reviewIdsByPr: Map<string, string[]>,
   rows: FindingPreviewRow[],
 ): Map<string, PrFindingPreview[]> {
   const byReview = new Map<string, FindingPreviewRow[]>();
@@ -50,8 +70,8 @@ export function latestFindingsByPr(
     else byReview.set(r.reviewId, [r]);
   }
   const out = new Map<string, PrFindingPreview[]>();
-  for (const [prId, reviewId] of latestReviewIdByPr) {
-    const sorted = [...(byReview.get(reviewId) ?? [])].sort(
+  for (const [prId, reviewIds] of reviewIdsByPr) {
+    const sorted = reviewIds.flatMap((id) => byReview.get(id) ?? []).sort(
       (a, b) =>
         SEVERITY_ORDER.get(a.severity)! - SEVERITY_ORDER.get(b.severity)! ||
         b.confidence - a.confidence,

@@ -7,6 +7,7 @@ Append-only. One line per finding, at the end of its section:
 
 ## What Doesn't Work
 - 2026-10-05 An integration test that reaches `container.github()` (e.g. `GET /repos/:id/pulls`) calls real GitHub whenever `GITHUB_TOKEN` is in the env or `~/.devdigest/secrets.json`; override `github: new MockGitHubClient()` in `buildApp`. Applies to `test/reviews.it.test.ts:131`.
+- 2026-10-07 Supersedes the 2026-10-07 PR-list entry: "Run all agents" writes one review per agent, so taking FINDINGS from the newest review overall hid one agent's findings behind another's clean run (PR showed 0 while an agent had found 2); FINDINGS now merge the newest review of each agent, while SCORE still uses the newest single review and COST totals every `done` run. Applies to `src/modules/pulls/routes.ts:135`.
 
 ## Codebase Patterns
 - 2026-09-19 Server boot (`src/server.ts`) never runs migrations; run `pnpm db:migrate` explicitly after pulling schema changes. Applies to `package.json:13`.
@@ -16,6 +17,7 @@ Append-only. One line per finding, at the end of its section:
 - 2026-10-05 Supersedes the 2026-10-05 client contract note: the `server` and `client` copies of `trace.ts` already differ in the `PromptAssembly` doc comments (lines 44-47), so add schema fields by hand in both and never copy one file over the other. Applies to `src/vendor/shared/contracts/trace.ts:44`.
 - 2026-10-05 Supersedes the `run-cost.ts` entry above: the PR list COST is now the SUM of all the PR's `done` runs with a known cost (null when none is known), not the latest review's run; when older runs have NULL cost the total under-reports, which is accepted over showing `--`. Applies to `src/modules/pulls/run-cost.ts:13`.
 - 2026-10-07 On `GET /repos/:id/pulls`, SCORE and FINDINGS both come from the latest `kind='review'` row while COST totals every `done` run; this mismatch is deliberate (criteria 12 vs 20), so do not "align" them. Applies to `src/modules/pulls/routes.ts:133`.
+- 2026-10-07 Supersedes the SCORE part of the per-agent findings entry: the PR-list SCORE is now the lowest score among the newest review of each agent (same reviews as FINDINGS), so a clean run by one agent never shows 100 next to another agent's CRITICAL; COST still totals every `done` run. Applies to `src/modules/pulls/routes.ts:131`.
 
 ## Tool & Library Notes
 
@@ -27,5 +29,6 @@ Append-only. One line per finding, at the end of its section:
 - 2026-10-05 Added 2 entries to server/INSIGHTS.md (GitHub mock in integration tests, vendored contract note).
 - 2026-10-05 Added 1 entry to server/INSIGHTS.md (PR-list cost is now a total).
 - 2026-10-07 Added 1 entry to server/INSIGHTS.md (PR-list findings vs cost source).
+- 2026-10-07 Added 1 entry to server/INSIGHTS.md (per-agent findings on the PR list).
 
 ## Open Questions
