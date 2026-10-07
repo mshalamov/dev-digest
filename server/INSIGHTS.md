@@ -15,6 +15,7 @@ Append-only. One line per finding, at the end of its section:
 - 2026-10-05 `runLog.logFor()` snapshots the buffer, so a line logged after the trace literal is never persisted; log (e.g. the `Run complete` cost line) before building the trace. Applies to `src/modules/reviews/run-executor.ts:292`.
 - 2026-10-05 Supersedes the 2026-10-05 client contract note: the `server` and `client` copies of `trace.ts` already differ in the `PromptAssembly` doc comments (lines 44-47), so add schema fields by hand in both and never copy one file over the other. Applies to `src/vendor/shared/contracts/trace.ts:44`.
 - 2026-10-05 Supersedes the `run-cost.ts` entry above: the PR list COST is now the SUM of all the PR's `done` runs with a known cost (null when none is known), not the latest review's run; when older runs have NULL cost the total under-reports, which is accepted over showing `--`. Applies to `src/modules/pulls/run-cost.ts:13`.
+- 2026-10-07 On `GET /repos/:id/pulls`, SCORE and FINDINGS both come from the latest `kind='review'` row while COST totals every `done` run; this mismatch is deliberate (criteria 12 vs 20), so do not "align" them. Applies to `src/modules/pulls/routes.ts:133`.
 
 ## Tool & Library Notes
 
@@ -25,5 +26,6 @@ Append-only. One line per finding, at the end of its section:
 - 2026-10-05 Added 3 entries to server/INSIGHTS.md (run-cost-badge).
 - 2026-10-05 Added 2 entries to server/INSIGHTS.md (GitHub mock in integration tests, vendored contract note).
 - 2026-10-05 Added 1 entry to server/INSIGHTS.md (PR-list cost is now a total).
+- 2026-10-07 Added 1 entry to server/INSIGHTS.md (PR-list findings vs cost source).
 
 ## Open Questions

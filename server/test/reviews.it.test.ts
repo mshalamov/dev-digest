@@ -237,6 +237,15 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     const row = list.find((p: { id: string }) => p.id === pr.id);
     expect(row.cost_usd).toBeCloseTo(0.001, 10);
     expect(row.score).toBe(65);
+    // FINDINGS column: the latest review's kept findings ('1/2 passed' ⇒ one kept)
+    expect(row.findings).toHaveLength(1);
+    expect(row.findings[0]).toMatchObject({
+      severity: expect.stringMatching(/^(CRITICAL|WARNING|SUGGESTION)$/),
+      summary: expect.any(String),
+    });
+    expect(row.findings[0]).not.toHaveProperty('suggestion');
+    const c = row.findings_counts;
+    expect(c.CRITICAL + c.WARNING + c.SUGGESTION).toBe(1);
 
     await app.close();
   });
@@ -262,6 +271,8 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
 
     const list = (await app.inject({ method: 'GET', url: `/repos/${repo.id}/pulls` })).json();
     expect(list.find((p: { id: string }) => p.id === pr.id).cost_usd).toBeNull();
+    expect(list.find((p: { id: string }) => p.id === pr.id).findings).toBeNull(); // never reviewed
+    expect(list.find((p: { id: string }) => p.id === pr.id).findings_counts).toBeNull();
     await app.close();
   });
 

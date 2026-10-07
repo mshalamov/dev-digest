@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { ReviewRecord, RunSummary } from "@devdigest/shared";
+import type { FindingRecord, ReviewRecord, RunSummary } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
 
 vi.mock("../../../../../../../lib/hooks/reviews", () => ({
@@ -85,5 +85,52 @@ describe("ReviewRunAccordion — cost", () => {
     renderCard(RUN(0.0013));
     fireEvent.click(screen.getByText("Security Reviewer"));
     expect(screen.getAllByText(/\$0\.0013/)).toHaveLength(1);
+  });
+});
+
+const F = (id: string, severity: FindingRecord["severity"], title: string): FindingRecord => ({
+  id, severity, title, category: "bug", file: "src/a.ts", start_line: 1, end_line: 1,
+  rationale: "r", suggestion: null, confidence: 0.9, kind: "finding",
+  trifecta_components: null, evidence: null, review_id: "rv1", accepted_at: null, dismissed_at: null,
+});
+
+function renderReview(review: ReviewRecord) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+      <ReviewRunAccordion review={review} prId="pr1" run={RUN(0.0013)} defaultOpen />
+    </NextIntlClientProvider>,
+  );
+}
+
+describe("ReviewRunAccordion — severity breakdown", () => {
+  const review: ReviewRecord = {
+    ...REVIEW,
+    findings: [F("c1", "CRITICAL", "Crit A"), F("c2", "CRITICAL", "Crit B"), F("w1", "WARNING", "Warn A")],
+  };
+
+  it("each pill's number equals the finding cards of that severity rendered below", () => {
+    const { container } = renderReview(review);
+    expect(screen.getByRole("button", { name: "2 CRITICAL" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1 WARNING" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /SUGGESTION$/ })).not.toBeInTheDocument();
+    expect(container.querySelectorAll("[data-finding-id]")).toHaveLength(3);
+  });
+
+  it("clicking a pill filters the cards and presses the matching filter button; a second click clears", () => {
+    const { container } = renderReview(review);
+    fireEvent.click(screen.getByRole("button", { name: "1 WARNING" }));
+    expect(container.querySelectorAll("[data-finding-id]")).toHaveLength(1);
+    expect(screen.getByText("Warn A")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Warning" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "1 WARNING" }));
+    expect(container.querySelectorAll("[data-finding-id]")).toHaveLength(3);
+  });
+
+  it("the Critical filter button drives the same state as the pills", () => {
+    const { container } = renderReview(review);
+    fireEvent.click(screen.getByRole("button", { name: "Critical" }));
+    expect(container.querySelectorAll("[data-finding-id]")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "2 CRITICAL" })).toHaveAttribute("aria-pressed", "true");
   });
 });

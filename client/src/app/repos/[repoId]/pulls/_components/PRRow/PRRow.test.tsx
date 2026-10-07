@@ -1,11 +1,13 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../../../../messages/en/prReview.json";
 import type { PrMeta } from "@/lib/types";
+import type { PrFindingPreview } from "@devdigest/shared";
 import { PRRow } from "./PRRow";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 afterEach(cleanup);
 
 const pr = (over: Partial<PrMeta>): PrMeta => ({
@@ -35,5 +37,43 @@ describe("PRRow cost column", () => {
   it("shows -- when cost_usd is absent from the payload", () => {
     renderRow(pr({}));
     expect(screen.getByText("--")).toBeInTheDocument();
+  });
+});
+
+const finding = (id: string, severity: PrFindingPreview["severity"]): PrFindingPreview => ({
+  id, severity, category: "bug", title: `T-${id}`, file: "a.ts", start_line: 1, end_line: 1, confidence: 0.8, summary: "s",
+});
+
+describe("PRRow findings column", () => {
+  it("renders the FINDINGS cell from pr.findings", () => {
+    renderRow(pr({ findings: [finding("a", "CRITICAL"), finding("b", "SUGGESTION")] }));
+    expect(screen.getByLabelText("2 findings in the latest run")).toBeInTheDocument();
+  });
+
+  it("clicking inside the popover does not open the PR", () => {
+    push.mockClear();
+    renderRow(pr({ findings: [finding("a", "CRITICAL")] }));
+    fireEvent.mouseEnter(screen.getByLabelText("1 finding in the latest run"));
+    fireEvent.click(within(screen.getByRole("dialog")).getByText("T-a"));
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("tapping/clicking the severity icons opens the preview, not the PR", () => {
+    push.mockClear();
+    renderRow(pr({ findings: [finding("a", "CRITICAL")] }));
+    fireEvent.click(screen.getByLabelText("1 finding in the latest run"));
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("passes the full counts through to the cell", () => {
+    renderRow(pr({ findings: [finding("a", "CRITICAL")], findings_counts: { CRITICAL: 3, WARNING: 0, SUGGESTION: 0 } }));
+    expect(screen.getByLabelText("3 findings in the latest run")).toBeInTheDocument();
+  });
+
+  it("clicking the row elsewhere still opens the PR", () => {
+    push.mockClear();
+    renderRow(pr({ findings: [] }));
+    fireEvent.click(screen.getByText("Add rate limiting"));
+    expect(push).toHaveBeenCalledWith("/repos/r1/pulls/482");
   });
 });

@@ -8,7 +8,8 @@
 import React from "react";
 import { Icon, Badge } from "@devdigest/ui";
 import { RunCostBadge } from "@/components/run-cost-badge";
-import type { ReviewRecord, RunSummary, Verdict } from "@devdigest/shared";
+import type { ReviewRecord, RunSummary, Severity, Verdict } from "@devdigest/shared";
+import { countBySeverity, toggleSeverity } from "@/lib/severity";
 import { FindingsPanel } from "../FindingsPanel";
 import { VerdictBanner } from "../VerdictBanner";
 import { useDeleteReview } from "../../../../../../../lib/hooks/reviews";
@@ -57,6 +58,10 @@ export function ReviewRunAccordion({
   }, [targetRunId, targetNonce, review.run_id]);
   const del = useDeleteReview(prId);
   const findings = review.findings;
+  // One severity filter per run card, shared by the verdict pills and the
+  // FindingsPanel filter buttons. Counts group the findings already loaded (no fetch).
+  const [severity, setSeverity] = React.useState<Severity | null>(null);
+  const severityCounts = React.useMemo(() => countBySeverity(findings), [findings]);
   const blockers = findings.filter((f) => f.severity === "CRITICAL" && !f.dismissed_at).length;
   const verdictColor = review.verdict ? VERDICT_COLOR[review.verdict] ?? "var(--text-muted)" : "var(--text-muted)";
 
@@ -149,6 +154,9 @@ export function ReviewRunAccordion({
                 findingsCount={findings.length}
                 blockers={blockers}
                 agentName={review.agent_name}
+                severityCounts={severityCounts}
+                activeSeverity={severity}
+                onSeverityToggle={(sev) => setSeverity((cur) => toggleSeverity(cur, sev))}
               />
             </div>
           )}
@@ -157,6 +165,8 @@ export function ReviewRunAccordion({
             prId={prId}
             repoFullName={repoFullName}
             headSha={headSha}
+            severity={severity}
+            onSeverityChange={setSeverity}
           />
         </div>
       )}

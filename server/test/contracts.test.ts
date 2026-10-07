@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   RunStats,
+  PrMeta,
   Review,
   Finding,
   Intent,
@@ -216,5 +217,22 @@ describe('RunStats cost_usd', () => {
     expect(RunStats.parse(base).cost_usd).toBeUndefined();
     expect(RunStats.parse({ ...base, cost_usd: null }).cost_usd).toBeNull();
     expect(RunStats.parse({ ...base, cost_usd: 0.014 }).cost_usd).toBe(0.014);
+  });
+});
+
+describe('PrMeta findings', () => {
+  const base = {
+    number: 1, title: 't', author: 'a', branch: 'b', base: 'main', head_sha: 'x',
+    additions: 0, deletions: 0, files_count: 0, status: 'reviewed',
+  };
+  it('accepts absent, null and a preview array', () => {
+    expect(PrMeta.parse(base).findings).toBeUndefined();
+    expect(PrMeta.parse({ ...base, findings: null }).findings).toBeNull();
+    const f = { id: 'f1', severity: 'CRITICAL', category: 'security', title: 'x', file: 'a.ts',
+      start_line: 1, end_line: 2, confidence: 0.9, summary: 's' };
+    expect(PrMeta.parse({ ...base, findings: [f] }).findings).toEqual([f]);
+    const counts = { CRITICAL: 1, WARNING: 0, SUGGESTION: 4 };
+    expect(PrMeta.parse({ ...base, findings_counts: counts }).findings_counts).toEqual(counts);
+    expect(PrMeta.parse({ ...base, findings_counts: null }).findings_counts).toBeNull();
   });
 });

@@ -26,6 +26,20 @@
     "blockers": " · {count} blockers",
     "prScore": "PR SCORE"
   },
+  "severity": {
+    "pillsLabel": "Findings by severity",
+    "pill": {
+      "CRITICAL": "{count} CRITICAL",
+      "WARNING": "{count} WARNING",
+      "SUGGESTION": "{count} SUGGESTION"
+    },
+    "filterLabel": "Filter findings by severity",
+    "filter": {
+      "CRITICAL": "Critical",
+      "WARNING": "Warning",
+      "SUGGESTION": "Suggestion"
+    }
+  },
   "cost": {
     "none": "--",
     "title": "Cost of this run",
@@ -98,9 +112,18 @@
       "author": "Author",
       "size": "Size",
       "score": "Score",
+      "findings": "Findings",
       "status": "Status",
       "cost": "Cost",
       "updated": "Updated"
+    },
+    "findings": {
+      "notReviewed": "Not reviewed yet",
+      "noneTitle": "The latest run kept no findings",
+      "trigger": "{count, plural, one {# finding} other {# findings}} in the latest run",
+      "popoverTitle": "{count, plural, one {# FINDING} other {# FINDINGS}} IN THIS RUN",
+      "confidence": "{pct}% confidence",
+      "more": "+{count} more on the PR page"
     },
     "filesCount": "{count} files",
     "errorTitle": "Couldn’t load pull requests",

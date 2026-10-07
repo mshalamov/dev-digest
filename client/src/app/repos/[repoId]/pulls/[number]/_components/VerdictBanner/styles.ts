@@ -4,13 +4,15 @@ import type { CSSProperties } from "react";
 export const s = {
   wrap: {
     display: "flex",
-    gap: 18,
-    alignItems: "flex-start",
+    flexDirection: "column",
+    gap: 14,
     padding: 18,
     borderRadius: 10,
     border: "1px solid var(--border)",
     background: "var(--bg-elevated)",
   } satisfies CSSProperties,
+  top: { display: "flex", gap: 18, alignItems: "flex-start" } satisfies CSSProperties,
+  pillsRow: { paddingTop: 12, borderTop: "1px solid var(--border)" } satisfies CSSProperties,
   iconBox: (bg: string, color: string): CSSProperties => ({
     width: 40,
     height: 40,
