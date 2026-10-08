@@ -9,6 +9,8 @@ import { ToastProvider } from "../../../../../lib/toast";
 vi.mock("../../../../../lib/hooks/agents", () => ({
   useUpdateAgent: () => ({ mutate: vi.fn(), isPending: false, isSuccess: false, data: undefined }),
   useProviderModels: () => ({ data: [{ id: "gpt-4.1", provider: "openai" }] }),
+  useAgentSkills: () => ({ data: [], isLoading: false, isError: false, refetch: vi.fn() }),
+  useSetAgentSkills: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
 }));
 
 import { AgentEditor } from "./AgentEditor";
@@ -39,6 +41,15 @@ function renderWithIntl(ui: React.ReactElement) {
 }
 
 describe("A2 Agent Editor (smoke)", () => {
+  it("has exactly two tabs: Config and Skills", () => {
+    renderWithIntl(<AgentEditor agent={AGENT} tab="config" onTab={() => {}} />);
+    expect(screen.getByRole("button", { name: "Config" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Skills" })).toBeInTheDocument();
+    for (const absent of ["Evals", "Stats", "CI"]) {
+      expect(screen.queryByRole("button", { name: absent })).not.toBeInTheDocument();
+    }
+  });
+
   it("renders the Config tab fields", () => {
     renderWithIntl(<AgentEditor agent={AGENT} tab="config" onTab={() => {}} />);
     expect(screen.getByText("Config")).toBeInTheDocument();

@@ -17,6 +17,9 @@ import {
   Settings,
   Repo,
   PrDetail,
+  Skill,
+  SkillVersion,
+  SkillImportPreview,
 } from '@devdigest/shared';
 
 /**
@@ -234,5 +237,40 @@ describe('PrMeta findings', () => {
     const counts = { CRITICAL: 1, WARNING: 0, SUGGESTION: 4 };
     expect(PrMeta.parse({ ...base, findings_counts: counts }).findings_counts).toEqual(counts);
     expect(PrMeta.parse({ ...base, findings_counts: null }).findings_counts).toBeNull();
+  });
+});
+
+describe('Skills contracts', () => {
+  it('Skill accepts the imported_file source and agent link fields', () => {
+    const skill = Skill.parse({
+      id: 's1',
+      name: 'boundary-cases',
+      description: 'Flag tests that skip the boundary values of a changed condition.',
+      type: 'rubric',
+      source: 'imported_file',
+      body: '# Boundary cases',
+      enabled: false,
+      version: 1,
+      agent_ids: ['a1'],
+      agent_count: 1,
+    });
+    expect(skill.source).toBe('imported_file');
+    expect(skill.agent_count).toBe(1);
+  });
+
+  it('SkillVersion and SkillImportPreview parse', () => {
+    expect(
+      SkillVersion.parse({ skill_id: 's1', version: 2, body: 'b', created_at: '2026-10-08T10:00:00.000Z' })
+        .version,
+    ).toBe(2);
+    const preview = SkillImportPreview.parse({
+      name: 'breaking-change',
+      description: 'Flag removed or renamed public fields.',
+      type: 'convention',
+      body: '# Breaking change',
+      source_file: 'breaking-change/SKILL.md',
+      ignored_files: ['breaking-change/run.sh'],
+    });
+    expect(preview.ignored_files).toEqual(['breaking-change/run.sh']);
   });
 });

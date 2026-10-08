@@ -73,8 +73,10 @@ cd server && pnpm test                                          # both
 npm i -g agent-browser && agent-browser install
 cd e2e && npm install && npm test
 
-# repo-level: CLAUDE.md structure check (CLAUDE.md only at the repo root and module roots)
+# repo-level: AGENTS.md structure check (AGENTS.md and its CLAUDE.md symlink only at the repo root and module roots)
 cd .. && node scripts/check-claude-md.mjs   # previous line left us in e2e/; go back to the repo root
+node scripts/check-skills.mjs               # own skills (frontend-architecture, onion-architecture, pr-self-review)
+node --test scripts/*.test.mjs              # tests of both checkers
 ```
 
 ## Conventions
@@ -96,7 +98,7 @@ cd .. && node scripts/check-claude-md.mjs   # previous line left us in e2e/; go 
   because the server type-checks against `../reviewer-core/src`).
 - **`server/clones/**` is runtime data** (git-ignored) and never collected by
   any suite.
-- **CLAUDE.md files** exist only at the repo root and the four module roots
+- **AGENTS.md files** (each with a `CLAUDE.md` symlink to it) exist only at the repo root and the four module roots
   (`server`, `client`, `reviewer-core`, `e2e`). They link to docs, never copy
   them. When a module's folders, commands or rules change, update its
-  CLAUDE.md in the same change (check: `node scripts/check-claude-md.mjs`).
+  AGENTS.md in the same change (check: `node scripts/check-claude-md.mjs`).

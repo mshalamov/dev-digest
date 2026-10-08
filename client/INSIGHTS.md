@@ -15,6 +15,7 @@ Append-only. One line per finding, at the end of its section:
 - 2026-10-07 The per-run severity filter is one state in `ReviewRunAccordion`, shared by the verdict pills and the `FindingsPanel` filter buttons (the panel is controlled when `onSeverityChange` is passed); never add a second filter state in either child or pills and buttons drift apart. Applies to `src/app/repos/[repoId]/pulls/[number]/_components/ReviewRunAccordion/ReviewRunAccordion.tsx:63`.
 
 ## Tool & Library Notes
+- 2026-10-08 Vitest's file filter treats `[...]` as a glob class, so `vitest run "src/app/skills/\[id\]"` matches no tests; pass the quoted file path or an unbracketed parent dir (`src/app/agents`). Applies to `vitest.config.ts:18`.
 
 ## Recurring Errors & Fixes
 
@@ -23,5 +24,6 @@ Append-only. One line per finding, at the end of its section:
 - 2026-10-05 Added 1 entry to client/INSIGHTS.md (vendored contract note).
 - 2026-10-07 Added 2 entries to client/INSIGHTS.md (severity pills/filter, FINDINGS popover).
 - 2026-10-07 Added 1 entry to client/INSIGHTS.md (capture-phase scroll closes popover).
+- 2026-10-08 Added 1 entry to client/INSIGHTS.md (vitest bracket filters).
 
 ## Open Questions

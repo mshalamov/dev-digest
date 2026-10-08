@@ -74,4 +74,19 @@ describe("A5 Run Trace drawer (smoke)", () => {
     expect(screen.getByText("--")).toBeInTheDocument();
     expect(screen.queryByText(/\$/)).not.toBeInTheDocument();
   });
+
+  it("shows the token count of each prompt block, including the skills block", () => {
+    renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
+    fireEvent.click(screen.getByText("Prompt assembly"));
+    // skills "### skill" = 9 chars → ceil(9 / 4) = 3; user "Review PR #482" = 14 → 4
+    expect(screen.getByText("~3 tokens")).toBeInTheDocument();
+    expect(screen.getByText("~4 tokens")).toBeInTheDocument();
+  });
+
+  it("omits the skills block when the run had no skills", () => {
+    TRACE = { ...BASE_TRACE, prompt_assembly: { ...BASE_TRACE.prompt_assembly, skills: null } };
+    renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
+    fireEvent.click(screen.getByText("Prompt assembly"));
+    expect(screen.queryByText("Skills (dynamic)")).not.toBeInTheDocument();
+  });
 });

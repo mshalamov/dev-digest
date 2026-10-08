@@ -8,6 +8,7 @@ import type { ReviewRepository, FindingRow, PullRow, ReviewRow } from './reposit
 import { REVIEW_STRATEGY } from './constants.js';
 import { taskLine } from './helpers.js';
 import { loadDiff } from './diff-loader.js';
+import { toSkillBlocks } from './skill-blocks.js';
 
 /** Thrown by a run when the user cancels it mid-flight (between map files). */
 export class RunCancelledError extends Error {
@@ -181,6 +182,16 @@ export class ReviewRunExecutor {
       const repoMap = repoIntelOn ? await this.buildRepoMapDigest(pull.repoId, runLog) : undefined;
       const rankNote = repoIntelOn ? await this.buildRankNote(pull.repoId, diff, runLog) : '';
 
+      // Skills — linked to this agent (agent_skills.order) AND enabled globally.
+      // One log line per loaded skill makes each enabled skill visible in the
+      // run log; a disabled skill produces no line and no prompt block.
+      const linkedSkills = await this.agents.linkedSkills(agent.id);
+      const skillBlocks = toSkillBlocks(linkedSkills.map((l) => l.skill));
+      for (const block of skillBlocks) {
+        runLog.info(`Skill loaded: ${block.name} (~${this.container.tokenizer.count(block.text)} tokens)`);
+      }
+      if (skillBlocks.length === 0) runLog.info('No enabled skills linked to this agent');
+
       const task = taskLine(pull) + rankNote;
 
       // ---- Engine: assemble → single-pass → grounding -----------------------
@@ -203,6 +214,8 @@ export class ReviewRunExecutor {
         // PR author's description/body — untrusted; assemblePrompt wraps +
         // truncates it. Omitted when the PR has no body.
         ...(pull.body ? { prDescription: pull.body } : {}),
+        // Each skill is its own `### Skill:` block inside "## Skills / rules".
+        ...(skillBlocks.length > 0 ? { skills: skillBlocks.map((b) => b.text) } : {}),
         task,
         sessionId: `${repo.owner}/${repo.name}#${pull.number}:${agent.name}`,
         onEvent: (e) => runLog.event(e.kind, e.msg, e.data),
