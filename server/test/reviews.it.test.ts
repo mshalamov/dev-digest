@@ -389,4 +389,54 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     expect(body.runs.length).toBeGreaterThanOrEqual(2);
     await app.close();
   });
+  it('injects linked, enabled skills in link order and logs each one', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const { pr } = await setupRepoAndPr(pg.handle.db, workspaceId);
+    const mk = async (name: string, enabled = true) =>
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/skills',
+          payload: { name, description: `Flag ${name}.`, type: 'rubric', body: `Rules for ${name}.`, enabled },
+        })
+      ).json().id as string;
+    const alpha = await mk(`alpha-${pr.id}`);
+    const beta = await mk(`beta-${pr.id}`);
+    const gamma = await mk(`gamma-${pr.id}`, false);
+    const agent = (
+      await app.inject({
+        method: 'POST',
+        url: '/agents',
+        payload: { name: `Skilled ${pr.id}`, provider: 'openai', model: 'gpt-4.1', system_prompt: 'sec' },
+      })
+    ).json();
+
+    const runWith = async (skillIds: string[], expected: number) => {
+      await app.inject({ method: 'POST', url: `/agents/${agent.id}/skills`, payload: { skill_ids: skillIds } });
+      const res = await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } });
+      await waitForPrRuns(pg.handle.db, pr.id, { expected });
+      return fetchTrace(app, res.json().runs[0].run_id);
+    };
+
+    const first = await runWith([beta, alpha, gamma], 1);
+    const skills1: string = first.prompt_assembly.skills;
+    expect(skills1.indexOf(`### Skill: beta-${pr.id}`)).toBeGreaterThanOrEqual(0);
+    expect(skills1.indexOf(`### Skill: beta-${pr.id}`)).toBeLessThan(skills1.indexOf(`### Skill: alpha-${pr.id}`));
+    expect(skills1).not.toContain(`gamma-${pr.id}`);
+    const msgs1 = first.log.map((l: { msg: string }) => l.msg);
+    expect(msgs1.some((m: string) => m.startsWith(`Skill loaded: beta-${pr.id} (~`))).toBe(true);
+    expect(msgs1.some((m: string) => m.startsWith(`Skill loaded: alpha-${pr.id} (~`))).toBe(true);
+    expect(msgs1.some((m: string) => m.includes(`gamma-${pr.id}`))).toBe(false);
+
+    // Reordering in the agent's Skills tab flips the blocks in the next run.
+    const second = await runWith([alpha, beta], 2);
+    const skills2: string = second.prompt_assembly.skills;
+    expect(skills2.indexOf(`### Skill: alpha-${pr.id}`)).toBeLessThan(skills2.indexOf(`### Skill: beta-${pr.id}`));
+
+    // No linked skills → no skills block at all.
+    const third = await runWith([], 3);
+    expect(third.prompt_assembly.skills).toBeNull();
+    expect(third.log.some((l: { msg: string }) => l.msg === 'No enabled skills linked to this agent')).toBe(true);
+    await app.close();
+  });
 });

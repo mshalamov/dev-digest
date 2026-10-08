@@ -20,6 +20,7 @@ Append-only. One line per finding, at the end of its section:
 - 2026-10-07 Supersedes the SCORE part of the per-agent findings entry: the PR-list SCORE is now the lowest score among the newest review of each agent (same reviews as FINDINGS), so a clean run by one agent never shows 100 next to another agent's CRITICAL; COST still totals every `done` run. Applies to `src/modules/pulls/routes.ts:131`.
 
 ## Tool & Library Notes
+- 2026-10-08 fflate `unzipSync` inflates each entry into a buffer of the archive's declared `originalSize`, so a forged size header cannot exhaust memory; keep the cumulative size cap in the `filter` callback, which runs before inflation. Applies to `src/modules/skills/import.ts:66`.
 
 ## Recurring Errors & Fixes
 - 2026-10-05 `completeAgentRun` sets status `done` before `saveRunTrace`, so a test reading `/runs/:id/trace` right after `waitForPrRuns` can see no trace; poll in the helper. Applies to `test/reviews.it.test.ts:19`.
@@ -30,5 +31,6 @@ Append-only. One line per finding, at the end of its section:
 - 2026-10-05 Added 1 entry to server/INSIGHTS.md (PR-list cost is now a total).
 - 2026-10-07 Added 1 entry to server/INSIGHTS.md (PR-list findings vs cost source).
 - 2026-10-07 Added 1 entry to server/INSIGHTS.md (per-agent findings on the PR list).
+- 2026-10-08 Added 1 entry to server/INSIGHTS.md (fflate unzip sizing).
 
 ## Open Questions

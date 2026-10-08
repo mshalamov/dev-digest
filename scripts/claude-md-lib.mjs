@@ -8,13 +8,15 @@ const EXCLUDED = new Set(['node_modules', 'dist', '.next', 'clones', 'coverage']
 
 export const isExcluded = (name) => EXCLUDED.has(name) || name.startsWith('.');
 
-export function findClaudeMd(dir) {
+const GUIDE_NAMES = new Set(['AGENTS.md', 'CLAUDE.md']);
+
+export function findGuides(dir) {
   const out = [];
   const walk = (d) => {
     for (const e of readdirSync(d, { withFileTypes: true })) {
       if (e.isDirectory()) {
         if (!isExcluded(e.name)) walk(join(d, e.name));
-      } else if (e.name === 'CLAUDE.md') {
+      } else if (GUIDE_NAMES.has(e.name)) {
         out.push(join(d, e.name));
       }
     }
